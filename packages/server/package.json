@@ -18,12 +18,17 @@
       "require": "./dist/solidstart/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@rustigram/tma-core": "workspace:*"
   }
 }
