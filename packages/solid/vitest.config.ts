@@ -1,8 +1,8 @@
 import { defineConfig } from "vitest/config";
+import solid from "vite-plugin-solid";
 
-// vite-plugin-solid + @solidjs/testing-library are added in M4.1
-// when actual component tests are written.
 export default defineConfig({
+  plugins: [solid()],
   test: {
     name: "solid",
     environment: "jsdom",
