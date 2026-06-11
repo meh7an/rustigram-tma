@@ -1,0 +1,29 @@
+{
+  "name": "@rustigram/tma-server",
+  "version": "0.0.0",
+  "description": "Server-side initData validation for Telegram Mini Apps",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./solidstart": {
+      "types": "./dist/solidstart/index.d.ts",
+      "import": "./dist/solidstart/index.js",
+      "require": "./dist/solidstart/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
