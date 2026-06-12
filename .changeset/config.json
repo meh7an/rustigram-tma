@@ -3,7 +3,7 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [],
+  "linked": [["@rustigram/tma-core", "@rustigram/tma-solid", "@rustigram/tma-server"]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
