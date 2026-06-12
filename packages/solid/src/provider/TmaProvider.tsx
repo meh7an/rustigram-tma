@@ -61,6 +61,8 @@ export function TmaProvider(props: TmaProviderProps): JSX.Element {
   let ctx: TmaContextValue | null = null;
 
   try {
+    // called once; options are not reactive by design.
+    // eslint-disable-next-line solid/reactivity -- initBridge is intentionally
     const bridge = initBridge(props.options);
     const appState = createAppState(bridge);
     ctx = { bridge, appState };
@@ -70,6 +72,8 @@ export function TmaProvider(props: TmaProviderProps): JSX.Element {
   }
 
   if (!ctx) {
+    // initial render; TmaProvider does not re-render after mount.
+    // eslint-disable-next-line solid/reactivity -- fallback is read once on
     return (props.fallback ?? null) as JSX.Element;
   }
 
