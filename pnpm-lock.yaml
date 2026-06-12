@@ -79,14 +79,13 @@ importers:
         version: 7.3.5(@types/node@25.9.3)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
 
   packages/core:
-    dependencies:
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
     devDependencies:
       happy-dom:
         specifier: ^20.10.2
         version: 20.10.2
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
 
   packages/server:
     dependencies:
@@ -99,9 +98,6 @@ importers:
       '@rustigram/tma-core':
         specifier: workspace:*
         version: link:../core
-      '@rustigram/tma-solid':
-        specifier: workspace:*
-        version: 'link:'
     devDependencies:
       '@babel/core':
         specifier: ^7.29.7

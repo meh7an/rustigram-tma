@@ -6,6 +6,7 @@ export default defineConfig({
     "mock/index": "src/mock/index.ts",
   },
   format: ["esm", "cjs"],
+  minify: true,
   sourcemap: true,
   clean: true,
   dts: {

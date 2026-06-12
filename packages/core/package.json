@@ -38,10 +38,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
+  "peerDependencies": {
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "zod": "^4.4.3",
     "happy-dom": "^20.10.2"
   }
 }
