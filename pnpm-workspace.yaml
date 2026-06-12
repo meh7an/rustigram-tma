@@ -5,10 +5,14 @@ packages:
 overrides:
   human-id: "3.0.0"
 
+peerDependencyRules:
+  allowedVersions:
+    eslint-plugin-solid>eslint: ">=6"
+
 onlyBuiltDependencies:
   - "@parcel/watcher"
   - esbuild
 
 allowBuilds:
-  '@parcel/watcher': true
+  "@parcel/watcher": true
   esbuild: true
