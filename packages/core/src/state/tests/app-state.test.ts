@@ -1,8 +1,9 @@
+// @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppState } from "../app-state";
 import { initBridge } from "../../bridge/tma-bridge";
-import { buildMockWebApp } from "../../../__fixtures__/mock-web-app";
+import { buildMockWebApp } from "../../__fixtures__/mock-web-app";
 
 describe("createAppState", () => {
   it("getSnapshot returns initial state from the WebApp", () => {
@@ -103,6 +104,7 @@ describe("createAppState", () => {
       const appState = createAppState(bridge);
 
       const root = document.documentElement;
+
       expect(root.style.getPropertyValue("--tg-theme-bg-color")).toBe("#1c1c1d");
       expect(root.style.getPropertyValue("--tg-theme-button-color")).toBe("#2481cc");
       appState.destroy();

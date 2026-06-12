@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
 import { createTmaMock } from "@rustigram/tma-core/mock";
@@ -16,7 +17,10 @@ function renderInProvider<T>(
 
   render(() => (
     <TmaProvider options={{ mockWebApp: mock.webApp, skipReady: true }}>
-      {(() => { result.value = hook(); return null; })()}
+      {(() => {
+        result.value = hook();
+        return null;
+      })()}
     </TmaProvider>
   ));
 
@@ -31,7 +35,7 @@ describe("useColorScheme", () => {
 
   it("updates when themeChanged is emitted", () => {
     const { result, mock } = renderInProvider({ colorScheme: "light" }, useColorScheme);
-    (mock.webApp as { colorScheme: string }).colorScheme = "dark";
+    mock.setState({ colorScheme: "dark" });
     mock.emit("themeChanged", undefined);
     expect((result.value as Accessor<string>)()).toBe("dark");
   });

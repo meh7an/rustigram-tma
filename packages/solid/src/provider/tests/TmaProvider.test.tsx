@@ -1,8 +1,9 @@
+// @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { render, cleanup } from "@solidjs/testing-library";
-import { createTmaMock } from "@rustigram/tma-core/mock";
 import { TmaProvider } from "../TmaProvider";
 import { useTma } from "../use-tma";
+import { createTmaMock } from "@rustigram/tma-core/mock";
 
 afterEach(cleanup);
 
@@ -32,12 +33,15 @@ describe("TmaProvider", () => {
   });
 
   it("provides bridge and appState via useTma()", () => {
-    const { mock, options } = makeMockOptions();
+    const { options } = makeMockOptions();
     let ctx: ReturnType<typeof useTma> | undefined;
 
     render(() => (
       <TmaProvider options={options}>
-        {(() => { ctx = useTma(); return null; })()}
+        {(() => {
+          ctx = useTma();
+          return null;
+        })()}
       </TmaProvider>
     ));
 

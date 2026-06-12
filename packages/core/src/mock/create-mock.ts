@@ -141,6 +141,16 @@ export interface MockStorage {
   secure: Map<string, string>;
 }
 
+export interface MockStateUpdate {
+  colorScheme?: ColorScheme;
+  themeParams?: Partial<ThemeParams>;
+  viewportHeight?: number;
+  viewportStableHeight?: number;
+  isActive?: boolean;
+  isExpanded?: boolean;
+  isFullscreen?: boolean;
+}
+
 /**
  * A fully functional in-memory `TelegramWebApp` mock for use in unit and
  * component tests. Created by `createTmaMock()`.
@@ -169,6 +179,7 @@ export interface TmaMock {
    * Call between tests to ensure isolation.
    */
   reset(config?: MockConfig): void;
+  setState(updates: MockStateUpdate): void;
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -672,5 +683,15 @@ export function createTmaMock(config: MockConfig = {}): TmaMock {
     handlers.clear();
   }
 
-  return { webApp, sensors, storage, emit, reset };
+  function setState(updates: MockStateUpdate): void {
+    if (updates.colorScheme !== undefined) colorScheme = updates.colorScheme;
+    if (updates.themeParams !== undefined) themeParams = { ...themeParams, ...updates.themeParams };
+    if (updates.viewportHeight !== undefined) viewportHeight = updates.viewportHeight;
+    if (updates.viewportStableHeight !== undefined) viewportStableHeight = updates.viewportStableHeight;
+    if (updates.isActive !== undefined) isActive = updates.isActive;
+    if (updates.isExpanded !== undefined) isExpanded = updates.isExpanded;
+    if (updates.isFullscreen !== undefined) isFullscreen = updates.isFullscreen;
+  }
+
+  return { webApp, sensors, storage, emit, reset, setState };
 }

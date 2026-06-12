@@ -186,7 +186,7 @@ describe("createTmaMock — integration with bridge + state", () => {
 
     appState.subscribe("colorScheme", listener);
     // Simulate Telegram updating the theme
-    (mock.webApp as { colorScheme: string }).colorScheme = "dark";
+    mock.setState({ colorScheme: "dark" });
     mock.emit("themeChanged", undefined);
 
     expect(listener).toHaveBeenCalledWith("dark");

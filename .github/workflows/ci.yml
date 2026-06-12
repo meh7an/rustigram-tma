@@ -13,13 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: "22"
+          check-latest: true
           cache: pnpm
 
       - name: Install dependencies
@@ -35,4 +36,4 @@ jobs:
         run: pnpm lint
 
       - name: Test
-        run: pnpm test --run
+        run: pnpm exec vitest run # uses vitest.workspace.ts — runs all three packages

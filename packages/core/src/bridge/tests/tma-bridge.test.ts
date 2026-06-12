@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { initBridge, isTelegramAvailable, TmaBridgeError } from "../tma-bridge";
-import { buildMockWebApp } from "../../../__fixtures__/mock-web-app";
+import { buildMockWebApp } from "../../__fixtures__/mock-web-app";
 
 describe("isTelegramAvailable", () => {
   it("returns false when window.Telegram is not set", () => {

@@ -3,8 +3,11 @@ import solid from "vite-plugin-solid";
 
 export default defineConfig({
   plugins: [solid()],
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "solid-js",
+  },
   test: {
-    name: "solid",
-    environment: "jsdom",
+    environment: "happy-dom",
   },
 });

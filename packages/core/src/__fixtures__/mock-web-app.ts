@@ -18,6 +18,10 @@ interface MockWebAppOverrides {
 export type MockWebApp = TelegramWebApp & {
   /** Trigger a registered event handler as if Telegram fired it. */
   __emit<T extends TmaEventType>(event: T, payload: TmaEventPayload<T>): void;
+  colorScheme: TelegramWebApp["colorScheme"];
+  viewportHeight: number;
+  viewportStableHeight: number;
+  themeParams: TelegramWebApp["themeParams"];
 };
 
 export function buildMockWebApp(overrides: MockWebAppOverrides = {}): MockWebApp {

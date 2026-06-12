@@ -23,10 +23,8 @@ export const BackButton: Component<BackButtonProps> = (props) => {
   const { bridge } = useTma();
   const btn = bridge.webApp.BackButton;
 
-  onMount(() => {
-    btn.show();
-    onCleanup(() => btn.hide());
-  });
+  onMount(() => btn.show());
+  onCleanup(() => btn.hide());
 
   createEffect(() => {
     const handler = props.onBack;

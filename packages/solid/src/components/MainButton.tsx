@@ -37,10 +37,8 @@ export const MainButton: Component<MainButtonProps> = (props) => {
   const { bridge } = useTma();
   const btn = bridge.webApp.MainButton;
 
-  onMount(() => {
-    btn.show();
-    onCleanup(() => btn.hide());
-  });
+  onMount(() => btn.show());
+  onCleanup(() => btn.hide());
 
   createEffect(() => {
     const params: BottomButtonParams = { is_visible: true };
