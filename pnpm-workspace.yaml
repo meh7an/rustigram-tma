@@ -1,5 +1,14 @@
 packages:
-  - 'packages/*'
-  - 'apps/*'
+  - "packages/*"
+  - "apps/*"
+
+overrides:
+  human-id: "3.0.0"
+
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - esbuild
+
 allowBuilds:
+  '@parcel/watcher': true
   esbuild: true

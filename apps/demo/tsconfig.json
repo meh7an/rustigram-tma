@@ -10,7 +10,7 @@
     "allowJs": true,
     "strict": true,
     "noEmit": true,
-    "types": ["vite/client"],
+    "types": ["@solidjs/start/env"],
     "isolatedModules": true,
     "paths": {
       "~/*": ["./src/*"]

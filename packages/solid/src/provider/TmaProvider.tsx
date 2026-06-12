@@ -18,6 +18,7 @@ export function TmaProvider(props: TmaProviderProps): JSX.Element {
   let ctx: TmaContextValue | null = null;
 
   try {
+    console.log("[TmaProvider] window.Telegram:", window.Telegram);
     const bridge = initBridge(props.options);
     const appState = createAppState(bridge);
     ctx = { bridge, appState };
@@ -31,9 +32,5 @@ export function TmaProvider(props: TmaProviderProps): JSX.Element {
   }
 
   const value = ctx;
-  return (
-    <TmaContext.Provider value={value}>
-      {props.children}
-    </TmaContext.Provider>
-  );
+  return <TmaContext.Provider value={value}>{props.children}</TmaContext.Provider>;
 }

@@ -6,6 +6,16 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      ".": [
+        "./dist/index.d.ts"
+      ],
+      "./mock": [
+        "./dist/mock/index.d.ts"
+      ]
+    }
+  },
   "exports": {
     "./mock": {
       "types": "./dist/mock/index.d.ts",
