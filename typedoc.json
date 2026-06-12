@@ -1,0 +1,15 @@
+{
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/core/src/mock/index.ts",
+    "packages/solid/src/index.ts",
+    "packages/server/src/index.ts",
+    "packages/server/src/solidstart/index.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "docs",
+  "tsconfig": "./tsconfig.typedoc.json",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "exclude": ["**/dist/**", "**/*.test.*", "**/__fixtures__/**", "**/tests/**"]
+}

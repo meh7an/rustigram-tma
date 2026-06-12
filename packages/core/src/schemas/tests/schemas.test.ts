@@ -74,12 +74,14 @@ describe("WebAppInitDataSchema", () => {
   });
 
   it("rejects when auth_date is missing", () => {
-    const { auth_date: _, ...rest } = validInitData;
+    const { auth_date, ...rest } = validInitData;
+    void auth_date;
     expect(WebAppInitDataSchema.safeParse(rest).success).toBe(false);
   });
 
   it("rejects when hash is missing", () => {
-    const { hash: _, ...rest } = validInitData;
+    const { hash, ...rest } = validInitData;
+    void hash;
     expect(WebAppInitDataSchema.safeParse(rest).success).toBe(false);
   });
 });

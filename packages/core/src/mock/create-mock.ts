@@ -24,38 +24,83 @@ import type { WebAppInitData } from "../schemas/init-data";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+/**
+ * Biometric behaviour overrides for `MockConfig`. Controls how the mock
+ * `BiometricManager` responds to `requestAccess` and `authenticate` calls.
+ */
 export interface MockBiometricConfig {
+  /** Whether biometric authentication is reported as available. Defaults to `true`. */
   isAvailable?: boolean;
+  /** The biometric type the mock reports. Defaults to `"finger"`. */
   biometricType?: BiometricType;
+  /** Whether `requestAccess` grants access. Defaults to `true`. */
   grantAccess?: boolean;
+  /** Whether `authenticate` reports success. Defaults to `true`. */
   authenticateSuccess?: boolean;
+  /** The token returned on successful authentication. Defaults to `"mock-token"`. */
   token?: string;
 }
 
+/**
+ * Location behaviour overrides for `MockConfig`. Controls how the mock
+ * `LocationManager` responds to `getLocation` calls.
+ */
 export interface MockLocationConfig {
+  /** Whether location access is granted. Defaults to `true`. */
   grantAccess?: boolean;
+  /**
+   * Partial `LocationData` to return from `getLocation`. Unset fields fall
+   * back to San Francisco coordinates (37.7749, -122.4194) with `null`
+   * accuracy fields. Pass `null` to simulate no location data.
+   */
   data?: Partial<LocationData> | null;
 }
 
+/**
+ * Configuration passed to `createTmaMock()` to control the initial state and
+ * simulated behaviour of the mock `TelegramWebApp`.
+ *
+ * All fields are optional — omitted fields fall back to sensible defaults that
+ * represent a typical iOS Mini App session.
+ */
 export interface MockConfig {
+  /** Bot API version string to report. Defaults to `"8.0"`. */
   version?: string;
+  /** Platform identifier to report. Defaults to `"unknown"`. */
   platform?: string;
+  /** Initial color scheme. Defaults to `"light"`. */
   colorScheme?: ColorScheme;
+  /** Partial theme params merged on top of the default light theme. */
   themeParams?: Partial<ThemeParams>;
+  /** Partial `WebAppInitData` merged into `initDataUnsafe`. */
   initData?: Partial<WebAppInitData>;
+  /** Initial `isActive` state. Defaults to `true`. */
   isActive?: boolean;
+  /** Initial `isExpanded` state. Defaults to `false`. */
   isExpanded?: boolean;
+  /** Initial `isFullscreen` state. Defaults to `false`. */
   isFullscreen?: boolean;
+  /** Initial `viewportHeight` in pixels. Defaults to `667`. */
   viewportHeight?: number;
+  /** Initial `viewportStableHeight` in pixels. Defaults to `667`. */
   viewportStableHeight?: number;
+  /** Partial safe area inset merged on top of all-zero defaults. */
   safeAreaInset?: Partial<SafeAreaInset>;
+  /** Partial content safe area inset merged on top of all-zero defaults. */
   contentSafeAreaInset?: Partial<ContentSafeAreaInset>;
+  /** Biometric behaviour overrides. */
   biometric?: MockBiometricConfig;
+  /** Location behaviour overrides. */
   location?: MockLocationConfig;
 }
 
 // ─── Public Mock Shape ────────────────────────────────────────────────────────
 
+/**
+ * Mutable state for a 3-axis sensor (accelerometer or gyroscope). Mutate
+ * these values directly in tests before calling `mock.emit("accelerometerChanged", undefined)`
+ * to simulate a sensor reading.
+ */
 export interface MockSensorXYZ {
   isStarted: boolean;
   x: number;
@@ -63,6 +108,10 @@ export interface MockSensorXYZ {
   z: number;
 }
 
+/**
+ * Mutable state for the device orientation sensor. Mutate these values
+ * directly in tests before emitting `deviceOrientationChanged`.
+ */
 export interface MockOrientationSensor {
   isStarted: boolean;
   absolute: boolean;
@@ -71,23 +120,54 @@ export interface MockOrientationSensor {
   gamma: number;
 }
 
+/**
+ * Direct access to mutable sensor state objects. Mutate these in tests to
+ * simulate sensor readings without going through the Telegram API.
+ */
 export interface MockSensors {
   accelerometer: MockSensorXYZ;
   gyroscope: MockSensorXYZ;
   deviceOrientation: MockOrientationSensor;
 }
 
+/**
+ * Direct access to the in-memory storage maps backing the mock
+ * `CloudStorage`, `DeviceStorage`, and `SecureStorage` implementations.
+ * Useful for asserting stored state in tests.
+ */
 export interface MockStorage {
   cloud: Map<string, string>;
   device: Map<string, string>;
   secure: Map<string, string>;
 }
 
+/**
+ * A fully functional in-memory `TelegramWebApp` mock for use in unit and
+ * component tests. Created by `createTmaMock()`.
+ *
+ * - `webApp` — pass to `initBridge({ mockWebApp: mock.webApp })`.
+ * - `sensors` — mutate directly to set sensor readings, then `emit` the change event.
+ * - `storage` — inspect the underlying Maps to assert stored values.
+ * - `emit` — fire any TMA event with a strongly-typed payload.
+ * - `reset` — restore all state to defaults (or a new config) between tests.
+ */
 export interface TmaMock {
+  /** The mock `TelegramWebApp` instance. Pass to `initBridge({ mockWebApp })`. */
   webApp: TelegramWebApp;
+  /** Mutable sensor state. Mutate then `emit` the corresponding event. */
   sensors: MockSensors;
+  /** Underlying storage maps. Inspect to assert stored values. */
   storage: MockStorage;
+  /**
+   * Fire a TMA event on the mock, invoking all registered handlers with the
+   * given payload. The handler's `this` is bound to `webApp`.
+   */
   emit<T extends TmaEventType>(event: T, payload: TmaEventPayload<T>): void;
+  /**
+   * Reset all mutable state back to defaults, optionally with a new config.
+   * Clears all registered event handlers, storage, and sensor state.
+   * Call between tests to ensure isolation.
+   */
   reset(config?: MockConfig): void;
 }
 
@@ -107,6 +187,36 @@ const ZERO_INSET: SafeAreaInset = { top: 0, bottom: 0, left: 0, right: 0 };
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
+/**
+ * Create a fully functional in-memory `TelegramWebApp` mock.
+ *
+ * The mock implements the complete `TelegramWebApp` interface with sensible
+ * defaults and configurable behaviour via `MockConfig`. Use it as a drop-in
+ * replacement for `window.Telegram.WebApp` in unit and component tests.
+ *
+ * @param config - Optional initial configuration. All fields default to
+ *   typical values for a Bot API 8.0 iOS session.
+ *
+ * @example
+ * import { createTmaMock } from "@rustigram/tma-core/mock";
+ * import { initBridge } from "@rustigram/tma-core";
+ *
+ * const mock = createTmaMock({ colorScheme: "dark" });
+ * const bridge = initBridge({ mockWebApp: mock.webApp });
+ *
+ * // Simulate a theme change event
+ * mock.emit("themeChanged", undefined);
+ *
+ * // Simulate a sensor reading
+ * mock.sensors.accelerometer.x = 9.8;
+ * mock.emit("accelerometerChanged", undefined);
+ *
+ * // Assert storage state
+ * expect(mock.storage.cloud.get("key")).toBe("value");
+ *
+ * // Reset between tests
+ * mock.reset();
+ */
 export function createTmaMock(config: MockConfig = {}): TmaMock {
   // ── Event system ────────────────────────────────────────────────────────────
 
@@ -223,76 +333,64 @@ export function createTmaMock(config: MockConfig = {}): TmaMock {
     get isVisible() { return backButtonVisible; },
     show() { backButtonVisible = true; return BackButton; },
     hide() { backButtonVisible = false; return BackButton; },
-    onClick(cb) {
-      on("backButtonClicked", cb as TmaEventHandler<"backButtonClicked">);
-      return BackButton;
-    },
-    offClick(cb) {
-      off("backButtonClicked", cb as TmaEventHandler<"backButtonClicked">);
-      return BackButton;
-    },
+    onClick(cb) { on("backButtonClicked", cb); return BackButton; },
+    offClick(cb) { off("backButtonClicked", cb); return BackButton; },
+  };
+
+  const SettingsButton: TelegramSettingsButton = {
+    get isVisible() { return settingsButtonVisible; },
+    show() { settingsButtonVisible = true; return SettingsButton; },
+    hide() { settingsButtonVisible = false; return SettingsButton; },
+    onClick(cb) { on("settingsButtonClicked", cb); return SettingsButton; },
+    offClick(cb) { off("settingsButtonClicked", cb); return SettingsButton; },
   };
 
   function makeBottomButton(
     type: "main" | "secondary",
-    s: BottomBtnState,
-    event: "mainButtonClicked" | "secondaryButtonClicked",
+    state: BottomBtnState,
+    eventName: "mainButtonClicked" | "secondaryButtonClicked",
   ): TelegramBottomButton {
     const btn: TelegramBottomButton = {
       get type() { return type; },
-      get text() { return s.text; },
-      get color() { return s.color; },
-      get textColor() { return s.textColor; },
-      get isVisible() { return s.isVisible; },
-      get isActive() { return s.isActive; },
-      get isProgressVisible() { return s.isProgressVisible; },
-      get hasShineEffect() { return s.hasShineEffect; },
-      get position() { return s.position; },
-      get iconCustomEmojiId() { return s.iconCustomEmojiId; },
-      setParams(p: BottomButtonParams) {
-        if (p.text !== undefined) s.text = p.text;
-        if (p.color !== undefined) s.color = p.color;
-        if (p.text_color !== undefined) s.textColor = p.text_color;
-        if (p.has_shine_effect !== undefined) s.hasShineEffect = p.has_shine_effect;
-        if (p.position !== undefined) s.position = p.position;
-        if (p.is_active !== undefined) s.isActive = p.is_active;
-        if (p.is_visible !== undefined) s.isVisible = p.is_visible;
-        if (p.icon_custom_emoji_id !== undefined) s.iconCustomEmojiId = p.icon_custom_emoji_id;
+      get text() { return state.text; },
+      get color() { return state.color; },
+      get textColor() { return state.textColor; },
+      get isVisible() { return state.isVisible; },
+      get isActive() { return state.isActive; },
+      get isProgressVisible() { return state.isProgressVisible; },
+      get hasShineEffect() { return state.hasShineEffect; },
+      get position() { return state.position; },
+      get iconCustomEmojiId() { return state.iconCustomEmojiId; },
+      setParams(params: BottomButtonParams) {
+        if (params.text !== undefined) state.text = params.text;
+        if (params.color !== undefined) state.color = params.color;
+        if (params.text_color !== undefined) state.textColor = params.text_color;
+        if (params.is_visible !== undefined) state.isVisible = params.is_visible;
+        if (params.is_active !== undefined) state.isActive = params.is_active;
+        if (params.has_shine_effect !== undefined) state.hasShineEffect = params.has_shine_effect;
+        if (params.position !== undefined) state.position = params.position;
+        if (params.icon_custom_emoji_id !== undefined) state.iconCustomEmojiId = params.icon_custom_emoji_id;
         return btn;
       },
-      setText(text) { s.text = text; return btn; },
-      show() { s.isVisible = true; return btn; },
-      hide() { s.isVisible = false; return btn; },
-      enable() { s.isActive = true; return btn; },
-      disable() { s.isActive = false; return btn; },
+      setText(text) { state.text = text; return btn; },
+      show() { state.isVisible = true; return btn; },
+      hide() { state.isVisible = false; return btn; },
+      enable() { state.isActive = true; return btn; },
+      disable() { state.isActive = false; return btn; },
       showProgress(leaveActive = false) {
-        s.isProgressVisible = true;
-        if (!leaveActive) s.isActive = false;
+        state.isProgressVisible = true;
+        if (!leaveActive) state.isActive = false;
         return btn;
       },
-      hideProgress() { s.isProgressVisible = false; s.isActive = true; return btn; },
-      onClick(cb) { on(event, cb as TmaEventHandler<typeof event>); return btn; },
-      offClick(cb) { off(event, cb as TmaEventHandler<typeof event>); return btn; },
+      hideProgress() { state.isProgressVisible = false; state.isActive = true; return btn; },
+      onClick(cb) { on(eventName, cb); return btn; },
+      offClick(cb) { off(eventName, cb); return btn; },
     };
     return btn;
   }
 
   const MainButton = makeBottomButton("main", mainBtnState, "mainButtonClicked");
   const SecondaryButton = makeBottomButton("secondary", secondaryBtnState, "secondaryButtonClicked");
-
-  const SettingsButton: TelegramSettingsButton = {
-    get isVisible() { return settingsButtonVisible; },
-    show() { settingsButtonVisible = true; return SettingsButton; },
-    hide() { settingsButtonVisible = false; return SettingsButton; },
-    onClick(cb) {
-      on("settingsButtonClicked", cb as TmaEventHandler<"settingsButtonClicked">);
-      return SettingsButton;
-    },
-    offClick(cb) {
-      off("settingsButtonClicked", cb as TmaEventHandler<"settingsButtonClicked">);
-      return SettingsButton;
-    },
-  };
 
   const HapticFeedback: TelegramHapticFeedback = {
     impactOccurred() { return HapticFeedback; },
@@ -301,39 +399,50 @@ export function createTmaMock(config: MockConfig = {}): TmaMock {
   };
 
   const CloudStorage: TelegramCloudStorage = {
-    getItem(key, cb) { cb(null, storage.cloud.get(key)); return CloudStorage; },
-    setItem(key, value, cb) { storage.cloud.set(key, value); cb?.(null, true); return CloudStorage; },
+    setItem(key, value, cb) {
+      storage.cloud.set(key, value);
+      cb?.(null, true);
+      return CloudStorage;
+    },
+    getItem(key, cb) {
+      cb(null, storage.cloud.get(key));
+      return CloudStorage;
+    },
     getItems(keys, cb) {
       const result: Record<string, string> = {};
-      for (const key of keys) {
-        const val = storage.cloud.get(key);
-        if (val !== undefined) result[key] = val;
+      for (const k of keys) {
+        const v = storage.cloud.get(k);
+        if (v !== undefined) result[k] = v;
       }
       cb(null, result);
       return CloudStorage;
     },
-    removeItem(key, cb) { storage.cloud.delete(key); cb?.(null, true); return CloudStorage; },
-    removeItems(keys, cb) {
-      for (const key of keys) storage.cloud.delete(key);
+    removeItem(key, cb) {
+      storage.cloud.delete(key);
       cb?.(null, true);
       return CloudStorage;
     },
-    getKeys(cb) { cb(null, [...storage.cloud.keys()]); return CloudStorage; },
+    removeItems(keys, cb) {
+      for (const k of keys) storage.cloud.delete(k);
+      cb?.(null, true);
+      return CloudStorage;
+    },
+    getKeys(cb) {
+      cb(null, [...storage.cloud.keys()]);
+      return CloudStorage;
+    },
   };
 
   const DeviceStorage: TelegramDeviceStorage = {
-    getItem(key, cb) { cb(null, storage.device.get(key)); return DeviceStorage; },
     setItem(key, value, cb) { storage.device.set(key, value); cb?.(null, true); return DeviceStorage; },
+    getItem(key, cb) { cb(null, storage.device.get(key)); return DeviceStorage; },
     removeItem(key, cb) { storage.device.delete(key); cb?.(null, true); return DeviceStorage; },
     clear(cb) { storage.device.clear(); cb?.(null, true); return DeviceStorage; },
   };
 
   const SecureStorage: TelegramSecureStorage = {
-    getItem(key, cb) {
-      cb(null, storage.secure.get(key) ?? null, false);
-      return SecureStorage;
-    },
     setItem(key, value, cb) { storage.secure.set(key, value); cb?.(null, true); return SecureStorage; },
+    getItem(key, cb) { cb(null, storage.secure.get(key) ?? null, false); return SecureStorage; },
     restoreItem(key, cb) { cb(null, storage.secure.get(key)); return SecureStorage; },
     removeItem(key, cb) { storage.secure.delete(key); cb?.(null, true); return SecureStorage; },
     clear(cb) { storage.secure.clear(); cb?.(null, true); return SecureStorage; },

@@ -3,30 +3,106 @@ import type { TelegramWebApp } from "../types/telegram";
 import type { ColorScheme, ThemeParams } from "../schemas/theme";
 import type { SafeAreaInset, ContentSafeAreaInset } from "../schemas/safe-area";
 
+/**
+ * A point-in-time snapshot of all observable `window.Telegram.WebApp`
+ * state fields. Updated reactively by `AppState` as Telegram fires events.
+ *
+ * @see https://core.telegram.org/bots/webapps#initializing-mini-apps
+ */
 export interface WebAppState {
+  /** Current color scheme of the Telegram app. */
   colorScheme: ColorScheme;
+  /** Current theme color parameters. Updated on `themeChanged`. */
   themeParams: ThemeParams;
+  /** Whether the Mini App is currently active (in the foreground). */
   isActive: boolean;
+  /** Whether the Mini App is expanded to the maximum available height. */
   isExpanded: boolean;
+  /** Whether the Mini App is currently in fullscreen mode. */
   isFullscreen: boolean;
+  /** Whether the screen orientation is currently locked. */
   isOrientationLocked: boolean;
+  /** Whether the closing confirmation dialog is enabled. */
   isClosingConfirmationEnabled: boolean;
+  /** Whether vertical swipe gestures are enabled. */
   isVerticalSwipesEnabled: boolean;
+  /** Current height of the visible area in pixels. Updated on `viewportChanged`. */
   viewportHeight: number;
+  /**
+   * Height of the visible area in its last stable state. Only updated when
+   * `viewportChanged` fires with `isStateStable: true`. Use this for layout
+   * to avoid jumps during transitions.
+   */
   viewportStableHeight: number;
+  /** Current header color as a `#RRGGBB` string or keyword. */
   headerColor: string;
+  /** Current background color as a `#RRGGBB` string or keyword. */
   backgroundColor: string;
+  /** Current bottom bar color as a `#RRGGBB` string or keyword. */
   bottomBarColor: string;
+  /** System safe area insets in pixels. Updated on `safeAreaChanged`. */
   safeAreaInset: SafeAreaInset;
+  /** Telegram UI safe area insets in pixels. Updated on `contentSafeAreaChanged`. */
   contentSafeAreaInset: ContentSafeAreaInset;
 }
 
 type StateKey = keyof WebAppState;
 
+/**
+ * Reactive state container for `WebAppState`. Created by `createAppState()`.
+ *
+ * Subscribes to Telegram events via the `TmaBridge` and keeps the snapshot
+ * up to date. Also injects Telegram CSS custom properties onto
+ * `document.documentElement` whenever theme or safe-area state changes.
+ *
+ * Call `destroy()` when the state is no longer needed to remove all event
+ * listeners and prevent memory leaks.
+ *
+ * @example
+ * const bridge = initBridge();
+ * const appState = createAppState(bridge);
+ *
+ * // Read current value
+ * const scheme = appState.getValue("colorScheme");
+ *
+ * // Subscribe to changes
+ * const unsubscribe = appState.subscribe("themeParams", (params) => {
+ *   console.log("Theme updated:", params);
+ * });
+ *
+ * // Cleanup
+ * unsubscribe();
+ * appState.destroy();
+ */
 export interface AppState {
+  /**
+   * Return the current state snapshot. The returned object is immutable —
+   * mutations will not affect the internal state.
+   */
   getSnapshot(): Readonly<WebAppState>;
+
+  /**
+   * Read a single field from the current state snapshot.
+   *
+   * @param key - A key of `WebAppState`.
+   */
   getValue<K extends StateKey>(key: K): WebAppState[K];
+
+  /**
+   * Subscribe to changes on a single state field. The listener is called
+   * synchronously whenever that field is updated.
+   *
+   * @param key - The field to watch.
+   * @param listener - Called with the new value each time the field changes.
+   * @returns An unsubscribe function. Call it to remove the listener.
+   */
   subscribe<K extends StateKey>(key: K, listener: (value: WebAppState[K]) => void): () => void;
+
+  /**
+   * Remove all Telegram event listeners registered by this `AppState`
+   * instance and clear all subscribers. Call this when the state is no
+   * longer needed to prevent memory leaks.
+   */
   destroy(): void;
 }
 
@@ -99,11 +175,30 @@ function snapshotFromWebApp(wa: TelegramWebApp): WebAppState {
   };
 }
 
+/**
+ * Create a reactive `AppState` bound to the given `TmaBridge`.
+ *
+ * On creation the state is immediately populated from the current
+ * `WebApp` values, CSS custom properties are injected onto
+ * `document.documentElement`, and event listeners are registered on the
+ * bridge to keep both in sync.
+ *
+ * @param bridge - A `TmaBridge` instance returned by `initBridge()`.
+ * @returns An `AppState` instance. Call `destroy()` when done.
+ *
+ * @example
+ * const bridge = initBridge();
+ * const appState = createAppState(bridge);
+ *
+ * const unsubscribe = appState.subscribe("colorScheme", (scheme) => {
+ *   document.body.dataset.scheme = scheme;
+ * });
+ */
 export function createAppState(bridge: TmaBridge): AppState {
   let state = snapshotFromWebApp(bridge.webApp);
 
-  // Listeners stored as unknown callbacks — cast is safe because notify() always
-  // passes the correctly-typed value for the corresponding key.
+  // Listeners stored as unknown callbacks — cast is safe because notify()
+  // always passes the correctly-typed value for the corresponding key.
   const listeners = new Map<StateKey, Set<(value: unknown) => void>>();
 
   function notify<K extends StateKey>(key: K, value: WebAppState[K]): void {

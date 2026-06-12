@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "noEmit": true
+  },
+  "include": ["packages/core/src", "packages/solid/src", "packages/server/src"],
+  "exclude": ["**/tests/**", "**/__fixtures__/**", "**/*.test.ts", "**/*.test.tsx"]
+}

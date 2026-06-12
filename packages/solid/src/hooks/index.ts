@@ -11,9 +11,6 @@ import {
   createLocationManager,
 } from "@rustigram/tma-core";
 import type {
-  TmaCloudStorage,
-  TmaDeviceStorage,
-  TmaSecureStorage,
   BiometricAuthResult,
   BiometricStatus,
   LocationManagerStatus,
@@ -28,43 +25,50 @@ import type {
 } from "@rustigram/tma-core";
 import { useTma } from "../provider/use-tma";
 
-// ─── Storage ─────────────────────────────────────────────────────────────────
+// ─── Storage ──────────────────────────────────────────────────────────────────
 
-interface StorageHook<S> {
-  store: S;
-  loading: Accessor<boolean>;
-}
-
-function useStorageBase<S>(factory: () => S): StorageHook<S> {
-  const store = factory();
-  const [loading, setLoading] = createSignal(false);
-
-  // Wrap each method with a loading flag. The returned object exposes the
-  // original methods; callers opt in to using `loading` if they want it.
-  const wrap =
-    <T>(fn: () => Promise<T>): (() => Promise<T>) =>
-    async () => {
-      setLoading(true);
-      try {
-        return await fn();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  return { store: store as S, loading };
-}
-
+/**
+ * Solid hook for `@rustigram/tma-core` `CloudStorage`.
+ *
+ * Wraps all storage operations with a shared `loading` signal that is `true`
+ * while any async operation is in flight. Must be called inside a component
+ * tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 6.9
+ *
+ * @example
+ * const { getItem, setItem, loading } = useCloudStorage();
+ * await setItem("key", "value");
+ * const value = await getItem("key");
+ */
 export interface CloudStorageHook {
+  /** Retrieve the value for `key`. Returns `null` when the key does not exist. */
   getItem(key: string): Promise<string | null>;
+  /** Store `value` under `key`. */
   setItem(key: string, value: string): Promise<void>;
+  /** Delete the entry for `key`. */
   removeItem(key: string): Promise<void>;
+  /** Delete entries for all provided keys in a single call. */
   removeItems(keys: string[]): Promise<void>;
+  /** Retrieve values for multiple keys. Missing keys are returned as `null`. */
   getItems(keys: string[]): Promise<Record<string, string | null>>;
+  /** Retrieve all stored keys. */
   getKeys(): Promise<string[]>;
+  /** `true` while any storage operation is in flight. */
   loading: Accessor<boolean>;
 }
 
+/**
+ * Solid hook that provides Promise-based access to Telegram's cloud storage
+ * with a reactive `loading` indicator.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 6.9
+ *
+ * @example
+ * const { getItem, setItem, loading } = useCloudStorage();
+ */
 export function useCloudStorage(): CloudStorageHook {
   const { bridge } = useTma();
   const storage = createCloudStorage(bridge.webApp.CloudStorage);
@@ -90,14 +94,43 @@ export function useCloudStorage(): CloudStorageHook {
   };
 }
 
+/**
+ * Solid hook for `@rustigram/tma-core` `DeviceStorage`.
+ *
+ * Wraps all storage operations with a shared `loading` signal. Data is
+ * persisted locally on the device and is not synced across devices.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 9.0
+ *
+ * @example
+ * const { getItem, setItem, loading } = useDeviceStorage();
+ */
 export interface DeviceStorageHook {
+  /** Retrieve the value for `key`. Returns `null` when the key does not exist. */
   getItem(key: string): Promise<string | null>;
+  /** Store `value` under `key`. */
   setItem(key: string, value: string): Promise<void>;
+  /** Delete the entry for `key`. */
   removeItem(key: string): Promise<void>;
+  /** Clear all stored key-value pairs. */
   clear(): Promise<void>;
+  /** `true` while any storage operation is in flight. */
   loading: Accessor<boolean>;
 }
 
+/**
+ * Solid hook that provides Promise-based access to the device's local storage
+ * with a reactive `loading` indicator.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 9.0
+ *
+ * @example
+ * const { getItem, setItem, loading } = useDeviceStorage();
+ */
 export function useDeviceStorage(): DeviceStorageHook {
   const { bridge } = useTma();
   const storage = createDeviceStorage(bridge.webApp.DeviceStorage);
@@ -117,15 +150,58 @@ export function useDeviceStorage(): DeviceStorageHook {
   };
 }
 
+/**
+ * Solid hook for `@rustigram/tma-core` `SecureStorage`.
+ *
+ * Wraps all storage operations with a shared `loading` signal. Values are
+ * stored in the device's secure enclave (iOS Keychain / Android Keystore)
+ * and survive app reinstallation via backup restoration.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 9.0
+ *
+ * @example
+ * const { getItem, loading } = useSecureStorage();
+ * const { value, canRestore } = await getItem("auth_token");
+ */
 export interface SecureStorageHook {
+  /**
+   * Retrieve the value for `key`. Returns `{ value: null, canRestore: false }`
+   * when the key does not exist. Check `canRestore` to determine if a backup
+   * copy is available via `restoreItem`.
+   */
   getItem(key: string): Promise<{ value: string | null; canRestore: boolean }>;
+  /** Store `value` under `key` in the secure enclave. */
   setItem(key: string, value: string): Promise<void>;
+  /**
+   * Attempt to restore a backed-up value for `key`. Returns the restored
+   * value, or `null` if no backup is available.
+   */
   restoreItem(key: string): Promise<string | null>;
+  /** Delete the entry for `key` from the secure enclave. */
   removeItem(key: string): Promise<void>;
+  /** Clear all stored key-value pairs from the secure enclave. */
   clear(): Promise<void>;
+  /** `true` while any storage operation is in flight. */
   loading: Accessor<boolean>;
 }
 
+/**
+ * Solid hook that provides Promise-based access to the device's secure
+ * storage with a reactive `loading` indicator.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 9.0
+ *
+ * @example
+ * const { getItem, restoreItem } = useSecureStorage();
+ * const { value, canRestore } = await getItem("auth_token");
+ * if (value === null && canRestore) {
+ *   const restored = await restoreItem("auth_token");
+ * }
+ */
 export function useSecureStorage(): SecureStorageHook {
   const { bridge } = useTma();
   const storage = createSecureStorage(bridge.webApp.SecureStorage);
@@ -148,13 +224,38 @@ export function useSecureStorage(): SecureStorageHook {
 
 // ─── Sensors ──────────────────────────────────────────────────────────────────
 
+/**
+ * Return value of `useAccelerometer()`.
+ *
+ * @since Bot API 8.0
+ */
 export interface AccelerometerHook {
+  /** Start accelerometer tracking. Rejects with `TmaSensorError` if unsupported. */
   start(params?: AccelerometerStartParams): Promise<void>;
+  /** Stop accelerometer tracking and clear the `data` signal. */
   stop(): Promise<void>;
+  /** Reactive signal with the latest `Vector3D` reading in m/s², or `null` when not started. */
   data: Accessor<Vector3D | null>;
+  /** Reactive signal that is `true` while tracking is active. */
   isRunning: Accessor<boolean>;
 }
 
+/**
+ * Solid hook for reactive accelerometer data.
+ *
+ * Creates a `TmaAccelerometer` instance, subscribes to readings, and exposes
+ * them as a reactive `data` signal. Automatically destroys the sensor on
+ * component cleanup.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 8.0
+ *
+ * @example
+ * const { start, data, isRunning } = useAccelerometer();
+ * await start({ refresh_rate: 100 });
+ * createEffect(() => console.log(data()?.x));
+ */
 export function useAccelerometer(): AccelerometerHook {
   const { bridge } = useTma();
   const acc = createAccelerometer(bridge);
@@ -172,13 +273,38 @@ export function useAccelerometer(): AccelerometerHook {
   };
 }
 
+/**
+ * Return value of `useGyroscope()`.
+ *
+ * @since Bot API 8.0
+ */
 export interface GyroscopeHook {
+  /** Start gyroscope tracking. Rejects with `TmaSensorError` if unsupported. */
   start(params?: GyroscopeStartParams): Promise<void>;
+  /** Stop gyroscope tracking and clear the `data` signal. */
   stop(): Promise<void>;
+  /** Reactive signal with the latest `Vector3D` reading in rad/s, or `null` when not started. */
   data: Accessor<Vector3D | null>;
+  /** Reactive signal that is `true` while tracking is active. */
   isRunning: Accessor<boolean>;
 }
 
+/**
+ * Solid hook for reactive gyroscope data.
+ *
+ * Creates a `TmaGyroscope` instance, subscribes to readings, and exposes
+ * them as a reactive `data` signal. Automatically destroys the sensor on
+ * component cleanup.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 8.0
+ *
+ * @example
+ * const { start, data } = useGyroscope();
+ * await start({ refresh_rate: 100 });
+ * createEffect(() => console.log(data()?.z));
+ */
 export function useGyroscope(): GyroscopeHook {
   const { bridge } = useTma();
   const gyro = createGyroscope(bridge);
@@ -196,13 +322,49 @@ export function useGyroscope(): GyroscopeHook {
   };
 }
 
+/**
+ * Return value of `useDeviceOrientation()`.
+ *
+ * @since Bot API 8.0
+ */
 export interface DeviceOrientationHook {
+  /** Start orientation tracking. Rejects with `TmaSensorError` if unsupported. */
   start(params?: DeviceOrientationStartParams): Promise<void>;
+  /** Stop orientation tracking and clear the `data` signal. */
   stop(): Promise<void>;
+  /**
+   * Reactive signal with the latest `OrientationData` snapshot, or `null`
+   * when not started. Check `data()?.absolute` to verify whether the data
+   * is relative to magnetic north.
+   */
   data: Accessor<OrientationData | null>;
+  /** Reactive signal that is `true` while tracking is active. */
   isRunning: Accessor<boolean>;
 }
 
+/**
+ * Solid hook for reactive device orientation data.
+ *
+ * Creates a `TmaDeviceOrientation` instance, subscribes to readings, and
+ * exposes them as a reactive `data` signal. Automatically destroys the
+ * sensor on component cleanup.
+ *
+ * Pass `need_absolute: true` in `start()` params for compass-style features.
+ * Check `data()?.absolute` to verify whether absolute data was actually
+ * provided — some devices ignore the request.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 8.0
+ *
+ * @example
+ * const { start, data } = useDeviceOrientation();
+ * await start({ need_absolute: true });
+ * createEffect(() => {
+ *   const d = data();
+ *   if (d?.absolute) console.log(`Heading: ${d.alpha}°`);
+ * });
+ */
 export function useDeviceOrientation(): DeviceOrientationHook {
   const { bridge } = useTma();
   const orient = createDeviceOrientation(bridge);
@@ -220,15 +382,51 @@ export function useDeviceOrientation(): DeviceOrientationHook {
   };
 }
 
+/**
+ * Return value of `useBiometric()`.
+ *
+ * @since Bot API 7.2
+ */
 export interface BiometricHook {
+  /** Initialise the `BiometricManager`. Must be called before any other method. */
   init(): Promise<void>;
+  /** Request biometric access. Returns `true` if the user granted it. */
   requestAccess(params?: BiometricRequestAccessParams): Promise<boolean>;
+  /** Authenticate the user. Returns success state and the stored token. */
   authenticate(params?: BiometricAuthenticateParams): Promise<BiometricAuthResult>;
+  /**
+   * Save or update the biometric token. Pass an empty string to clear it.
+   * Returns `true` if the update succeeded.
+   */
   updateToken(token: string): Promise<boolean>;
+  /**
+   * Open Telegram's settings page for this bot's biometric permissions.
+   * Must be called in response to a direct user interaction.
+   */
   openSettings(): void;
+  /** Reactive signal with the current `BiometricStatus` snapshot. */
   status: Accessor<BiometricStatus>;
 }
 
+/**
+ * Solid hook for reactive biometric authentication.
+ *
+ * Creates a `TmaBiometricManager` instance and keeps a reactive `status`
+ * signal in sync with `biometricManagerUpdated` events. Automatically
+ * removes event listeners on component cleanup.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 7.2
+ *
+ * @example
+ * const { init, requestAccess, authenticate, status } = useBiometric();
+ * await init();
+ * const granted = await requestAccess({ reason: "Authenticate to continue" });
+ * if (granted) {
+ *   const { success, token } = await authenticate();
+ * }
+ */
 export function useBiometric(): BiometricHook {
   const { bridge } = useTma();
   const bm = createBiometricManager(bridge);
@@ -248,13 +446,45 @@ export function useBiometric(): BiometricHook {
   };
 }
 
+/**
+ * Return value of `useLocation()`.
+ *
+ * @since Bot API 8.0
+ */
 export interface LocationHook {
+  /** Initialise the `LocationManager`. Must be called before any other method. */
   init(): Promise<void>;
+  /**
+   * Request the current location. Returns `null` if access is denied or
+   * location services are unavailable.
+   */
   getLocation(): Promise<LocationData | null>;
+  /**
+   * Open Telegram's settings page for this bot's location permissions.
+   * Must be called in response to a direct user interaction.
+   */
   openSettings(): void;
+  /** Reactive signal with the current `LocationManagerStatus` snapshot. */
   status: Accessor<LocationManagerStatus>;
 }
 
+/**
+ * Solid hook for reactive location access.
+ *
+ * Creates a `TmaLocationManager` instance and keeps a reactive `status`
+ * signal in sync with `locationManagerUpdated` events. Automatically
+ * removes event listeners on component cleanup.
+ *
+ * Must be called inside a component tree wrapped by `<TmaProvider>`.
+ *
+ * @since Bot API 8.0
+ *
+ * @example
+ * const { init, getLocation, status } = useLocation();
+ * await init();
+ * const data = await getLocation();
+ * if (data) console.log(`${data.latitude}, ${data.longitude}`);
+ */
 export function useLocation(): LocationHook {
   const { bridge } = useTma();
   const lm = createLocationManager(bridge);

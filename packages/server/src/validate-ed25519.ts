@@ -33,7 +33,21 @@ function buildEd25519DataCheckString(params: URLSearchParams, botId: number): st
   return `${botId}:WebAppData\n${fields}`;
 }
 
-/** Lower-level verification — exported for testing with custom key pairs. */
+/**
+ * Lower-level Ed25519 signature verification against an arbitrary public key.
+ *
+ * Exported primarily for testing with custom key pairs. In production, prefer
+ * `validateInitDataSignature` which uses Telegram's published public keys.
+ *
+ * Uses the Web Crypto API (`globalThis.crypto.subtle`) — runs in Node 22+,
+ * Deno, and edge runtimes without polyfills.
+ *
+ * @param dataCheckString - The canonical data-check string to verify.
+ * @param signatureBase64url - The `signature` field from `initData`, base64url-encoded.
+ * @param publicKeyHex - The Ed25519 public key as a lowercase hex string.
+ *
+ * @returns `true` if the signature is valid for the given data and key.
+ */
 export async function verifySignature(
   dataCheckString: string,
   signatureBase64url: string,
@@ -54,6 +68,49 @@ export async function verifySignature(
   );
 }
 
+/**
+ * Validate Telegram Mini App `initData` using Ed25519 signature verification
+ * against Telegram's published public key. This is the third-party validation
+ * method — it does not require knowledge of the bot token.
+ *
+ * Use this when your backend is not the bot's primary server (e.g. an
+ * external SDK, a data processor, or a service that receives `initData`
+ * without direct access to the bot token).
+ *
+ * Uses the Web Crypto API (`globalThis.crypto.subtle`) — runs in Node 22+,
+ * Deno, and edge runtimes without polyfills.
+ *
+ * The algorithm:
+ * 1. Build the data-check string: `${botId}:WebAppData\n` followed by all
+ *    fields (excluding `hash` and `signature`) sorted alphabetically as
+ *    `key=value` pairs joined by `\n`.
+ * 2. Verify the `signature` field against the data-check string using
+ *    Telegram's Ed25519 public key for the target environment.
+ *
+ * @param initData - The raw `window.Telegram.WebApp.initData` string sent
+ *   from the client. Never trust this value before validation.
+ * @param botId - The numeric bot ID (the part before the `:` in the bot
+ *   token, e.g. `123456789` from `"123456789:ABC..."`).
+ * @param options.env - Which Telegram environment to validate against.
+ *   Defaults to `"production"`. Pass `"test"` when using the test environment.
+ * @param options.maxAgeSeconds - When set, rejects `initData` whose
+ *   `auth_date` is older than this many seconds. Recommended: 3600 (1 hour).
+ *
+ * @returns A `ValidationResult`. On `ok: true`, `data` is the parsed
+ *   `WebAppInitData`. On `ok: false`, `error` describes the failure reason.
+ *
+ * @since Bot API 8.0
+ * @see https://core.telegram.org/bots/webapps#validating-data-for-third-party-use
+ *
+ * @example
+ * const result = await validateInitDataSignature(initDataString, 123456789, {
+ *   maxAgeSeconds: 3600,
+ * });
+ * if (!result.ok) {
+ *   return new Response("Unauthorized", { status: 401 });
+ * }
+ * const { user } = result.data;
+ */
 export async function validateInitDataSignature(
   initData: string,
   botId: number,

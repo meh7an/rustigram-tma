@@ -1,6 +1,16 @@
 import { WebAppInitDataSchema } from "@rustigram/tma-core";
 import type { WebAppInitData } from "@rustigram/tma-core";
 
+/**
+ * The result of a `validateInitData` or `validateInitDataSignature` call.
+ *
+ * On success, `data` contains the fully parsed and validated `WebAppInitData`
+ * object. On failure, `error` is one of:
+ * - `"invalid_hash"` — the hash or signature did not match.
+ * - `"expired"` — `auth_date` is older than `maxAgeSeconds`.
+ * - `"parse_error"` — the `initData` string could not be parsed or did not
+ *   conform to the `WebAppInitDataSchema`.
+ */
 export type ValidationResult =
   | { ok: true; data: WebAppInitData }
   | { ok: false; error: "invalid_hash" | "expired" | "parse_error" };
@@ -56,6 +66,41 @@ function parseInitDataParams(params: URLSearchParams): Record<string, unknown> {
   return raw;
 }
 
+/**
+ * Validate Telegram Mini App `initData` using HMAC-SHA256 against the bot
+ * token. This is the standard validation method for first-party Mini Apps
+ * where the backend knows the bot token.
+ *
+ * Uses the Web Crypto API (`globalThis.crypto.subtle`) — runs in Node 22+,
+ * Deno, and edge runtimes without polyfills.
+ *
+ * The algorithm:
+ * 1. `secret_key = HMAC-SHA256(key="WebAppData", message=botToken)`
+ * 2. `hash = HMAC-SHA256(key=secret_key, message=data_check_string)`
+ * 3. Compare `hash` to the `hash` field in `initData` using constant-time
+ *    comparison to prevent timing attacks.
+ *
+ * @param initData - The raw `window.Telegram.WebApp.initData` string sent
+ *   from the client. Never trust this value before validation.
+ * @param botToken - The bot token from `@BotFather`. Keep this secret —
+ *   never expose it to the client.
+ * @param options.maxAgeSeconds - When set, rejects `initData` whose
+ *   `auth_date` is older than this many seconds. Recommended: 3600 (1 hour).
+ *
+ * @returns A `ValidationResult`. On `ok: true`, `data` is the parsed
+ *   `WebAppInitData`. On `ok: false`, `error` describes the failure reason.
+ *
+ * @see https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
+ *
+ * @example
+ * const result = await validateInitData(initDataString, process.env.BOT_TOKEN, {
+ *   maxAgeSeconds: 3600,
+ * });
+ * if (!result.ok) {
+ *   return new Response("Unauthorized", { status: 401 });
+ * }
+ * const { user } = result.data;
+ */
 export async function validateInitData(
   initData: string,
   botToken: string,

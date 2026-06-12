@@ -2,16 +2,46 @@ import { createEffect, onCleanup, onMount, type Component } from "solid-js";
 import type { BottomButtonParams } from "@rustigram/tma-core";
 import { useTma } from "../provider/use-tma";
 
+/** Props for the `SecondaryButton` component. */
 export interface SecondaryButtonProps {
+  /** Button label text. */
   text?: string;
+  /** Button background color in `#RRGGBB` format. */
   color?: string;
+  /** Button text color in `#RRGGBB` format. */
   textColor?: string;
+  /**
+   * Position of the secondary button relative to the main button.
+   * @since Bot API 7.10
+   */
   position?: "left" | "right" | "top" | "bottom";
+  /** When `true`, the button is shown but does not accept clicks. */
   disabled?: boolean;
+  /** When `true`, shows a loading spinner on the button. */
   loading?: boolean;
+  /** Called when the user taps the secondary button. */
   onClick: () => void;
 }
 
+/**
+ * Renders nothing but shows the Telegram secondary bottom button while
+ * mounted and hides it on unmount. All props are reactive — changing them
+ * updates the button without remounting.
+ *
+ * Logs a warning and renders nothing if the current Bot API version is
+ * below 7.10.
+ *
+ * Must be rendered inside a `<TmaProvider>`.
+ *
+ * @since Bot API 7.10
+ *
+ * @example
+ * <SecondaryButton
+ *   text="Cancel"
+ *   position="left"
+ *   onClick={handleCancel}
+ * />
+ */
 export const SecondaryButton: Component<SecondaryButtonProps> = (props) => {
   const { bridge } = useTma();
 
