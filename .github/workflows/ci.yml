@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "22.12"
           check-latest: true
           cache: pnpm
 
@@ -36,4 +36,4 @@ jobs:
         run: pnpm lint
 
       - name: Test
-        run: pnpm exec vitest run # uses vitest.workspace.ts — runs all three packages
+        run: pnpm test

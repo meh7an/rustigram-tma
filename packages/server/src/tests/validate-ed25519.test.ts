@@ -21,7 +21,7 @@ describe("verifySignature", () => {
   });
 
   it("returns false when signature does not match the public key", async () => {
-    const { initData, publicKeyHex } = await buildValidEd25519InitData(BOT_ID);
+    const { initData } = await buildValidEd25519InitData(BOT_ID);
     const { publicKeyHex: otherKey } = await buildValidEd25519InitData(BOT_ID);
     const params = new URLSearchParams(initData);
     const signature = params.get("signature")!;
