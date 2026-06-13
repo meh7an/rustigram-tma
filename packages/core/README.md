@@ -9,15 +9,16 @@ pnpm add @rustigram/tma-core zod
 
 ## What's inside
 
-| Module  | Exports                                                                                                                |
-| ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Bridge  | `initBridge`, `isTelegramAvailable`, `TmaBridgeError`                                                                  |
-| State   | `createAppState`                                                                                                       |
-| Storage | `createCloudStorage`, `createDeviceStorage`, `createSecureStorage`                                                     |
-| Sensors | `createAccelerometer`, `createGyroscope`, `createDeviceOrientation`, `createBiometricManager`, `createLocationManager` |
-| Mock    | `createTmaMock` (subpath `@rustigram/tma-core/mock`)                                                                   |
-| Schemas | All TMA data types as Zod schemas + inferred TypeScript types                                                          |
-| Types   | `TelegramWebApp` and all sub-object interfaces                                                                         |
+| Module    | Exports                                                                                                                |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Bridge    | `initBridge`, `isTelegramAvailable`, `TmaBridgeError`                                                                  |
+| State     | `createAppState`                                                                                                       |
+| Storage   | `createCloudStorage`, `createDeviceStorage`, `createSecureStorage`                                                     |
+| Sensors   | `createAccelerometer`, `createGyroscope`, `createDeviceOrientation`, `createBiometricManager`, `createLocationManager` |
+| Mock      | `createTmaMock` (subpath `@rustigram/tma-core/mock`)                                                                   |
+| Schemas   | All TMA data types as Zod schemas + inferred TypeScript types                                                          |
+| Types     | `TelegramWebApp` and all sub-object interfaces                                                                         |
+| Generated | Rust-canonical TMA types (subpath `@rustigram/tma-core/generated`)                                                     |
 
 ## Usage
 
@@ -82,6 +83,23 @@ const unsubscribe = acc.subscribe(({ x, y, z }) => {
 });
 
 acc.destroy(); // stops tracking, removes event listeners
+```
+
+## Rust type bridge
+
+When your backend uses `rustigram-miniapp`, Rust structs are the source of
+truth for all TMA types. Generated TypeScript types are available via a
+dedicated subpath:
+
+```typescript
+import type { WebAppUser, WebAppInitData, ThemeParams } from "@rustigram/tma-core/generated";
+```
+
+These are structurally identical to the Zod-inferred types in the main export
+but originate from Rust. Regenerate after changing any Rust type:
+
+```bash
+cargo run --example gen-types --features ts
 ```
 
 ### Mock (for testing)

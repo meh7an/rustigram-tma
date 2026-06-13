@@ -11,10 +11,11 @@ pnpm add @rustigram/tma-server @rustigram/tma-core
 
 Two validation strategies — pick based on what you have:
 
-| Strategy    | Requires    | Use when                   |
-| ----------- | ----------- | -------------------------- |
-| HMAC-SHA256 | Bot token   | You control the bot        |
-| Ed25519     | Bot ID only | Third-party / no bot token |
+| Strategy    | Requires                  | Use when                                |
+| ----------- | ------------------------- | --------------------------------------- |
+| HMAC-SHA256 | Bot token                 | You control the bot                     |
+| Ed25519     | Bot ID only               | Third-party / no bot token              |
+| Parse-only  | None (upstream validated) | Behind `rustigram-miniapp` Rust gateway |
 
 ### HMAC-SHA256
 
@@ -106,6 +107,42 @@ async function getInitData() {
 ```
 
 Both throw with a descriptive message if the middleware didn't run or validation failed.
+
+## Behind a Rust Gateway
+
+When `rustigram-miniapp` acts as the gateway, pass `null` as the bot token.
+SolidStart parses without re-validating — no `BOT_TOKEN` needed in the
+TypeScript environment.
+
+```typescript
+// src/middleware.ts
+import { createMiddleware } from "@solidjs/start/middleware";
+import { createTmaMiddleware } from "@rustigram/tma-server/solidstart";
+
+export default createMiddleware({
+  onRequest: [
+    createTmaMiddleware(null, {
+      gatewaySecret: process.env.GATEWAY_SECRET!, // verifies X-Tma-Gateway header
+    }),
+  ],
+});
+```
+
+Without `gatewaySecret`, trust is network-level only (safe in VPC/private
+network). With it, SolidStart cryptographically verifies the request passed
+through the Rust gateway.
+
+### Parsing without middleware
+
+```typescript
+import { parseInitData } from "@rustigram/tma-server";
+
+// When upstream already validated:
+const result = parseInitData(rawInitData);
+if (result.ok) {
+  console.log(result.data.user);
+}
+```
 
 ## Framework-agnostic (Hono, Express, etc.)
 

@@ -1,4 +1,5 @@
 import { validateInitData } from "../validate-hmac";
+import { parseInitData, verifyGatewayHeader } from "../parse-init-data";
 import { setTmaLocals } from "./context";
 
 interface RequestEventLike {
@@ -7,21 +8,41 @@ interface RequestEventLike {
 }
 
 /**
- * Creates a SolidStart v2 `onRequest` middleware handler that validates the
- * `X-Telegram-Init-Data` request header using HMAC-SHA256 and attaches the
- * parsed `WebAppInitData` and `WebAppUser` to `event.locals`.
+ * Creates a SolidStart v2 `onRequest` middleware handler that validates or
+ * parses the `X-Telegram-Init-Data` request header and attaches the result
+ * to `event.locals`.
  *
- * Returns a `401 Unauthorized` response if the header is missing, the hash
- * is invalid, or the data has expired. On success, the validated data is
- * available in subsequent server functions via `getTmaInitData()` and
- * `getTmaUser()`.
+ * ## Validation mode (`botToken: string`)
  *
- * @param botToken - The bot token from `@BotFather`. Keep this secret —
- *   never expose it to the client. Typically `process.env.BOT_TOKEN`.
+ * Validates the initData using HMAC-SHA256 against the bot token. Returns
+ * `401 Unauthorized` if the header is missing, the hash is invalid, or the
+ * data has expired. Use this when SolidStart is the outermost server.
+ *
+ * ```ts
+ * createTmaMiddleware(process.env.BOT_TOKEN!, { maxAgeSeconds: 3600 })
+ * ```
+ *
+ * ## Parse-only mode (`botToken: null`)
+ *
+ * Skips HMAC validation and only parses the initData for type-safe access.
+ * Use this when a trusted upstream layer — such as `rustigram-miniapp` — has
+ * already validated the request before it reached SolidStart. In this mode,
+ * no `BOT_TOKEN` is required in the TypeScript environment.
+ *
+ * **Security:** only use `null` when SolidStart is not directly
+ * internet-accessible (i.e. it sits behind the Rust gateway).
+ *
+ * ```ts
+ * // No BOT_TOKEN needed — Rust already validated.
+ * createTmaMiddleware(null)
+ * ```
+ *
+ * @param botToken - Bot token for HMAC validation, or `null` for parse-only
+ *   mode when a trusted upstream has already validated.
  * @param options - Optional middleware configuration.
  *
  * @example
- * // src/middleware.ts
+ * // src/middleware.ts — validation mode (TS-only stack)
  * import { createMiddleware } from "@solidjs/start/middleware";
  * import { createTmaMiddleware } from "@rustigram/tma-server/solidstart";
  *
@@ -32,23 +53,22 @@ interface RequestEventLike {
  * });
  *
  * @example
- * // src/routes/index.tsx — reading validated data in a server function
- * import { getTmaUser } from "@rustigram/tma-server/solidstart";
- * import { getRequestEvent } from "solid-js/web";
+ * // src/middleware.ts — parse-only mode (behind rustigram-miniapp gateway)
+ * import { createMiddleware } from "@solidjs/start/middleware";
+ * import { createTmaMiddleware } from "@rustigram/tma-server/solidstart";
  *
- * export const getProfile = query(async () => {
- *   "use server";
- *   const user = getTmaUser(getRequestEvent()!);
- *   return { id: user.id, name: user.first_name };
- * }, "getProfile");
+ * export default createMiddleware({
+ *   onRequest: [createTmaMiddleware(null)],
+ * });
  */
 export function createTmaMiddleware(
-  botToken: string,
+  botToken: string | null,
   options: {
     /** The request header to read `initData` from. Defaults to `"X-Telegram-Init-Data"`. */
     headerName?: string;
-    /** Reject `initData` older than this many seconds. Recommended: `3600`. */
+    /** Reject `initData` older than this many seconds. Only applies in validation mode. */
     maxAgeSeconds?: number;
+    gatewaySecret?: string;
   } = {},
 ) {
   const headerName = options.headerName ?? "X-Telegram-Init-Data";
@@ -60,6 +80,30 @@ export function createTmaMiddleware(
       return new Response("Missing Telegram initData header.", { status: 401 });
     }
 
+    if (botToken === null) {
+      if (options.gatewaySecret) {
+        const gatewayHeader = event.request.headers.get("x-tma-gateway");
+        if (!gatewayHeader) {
+          return new Response("Missing gateway header.", { status: 401 });
+        }
+        const valid = await verifyGatewayHeader(
+          initDataRaw,
+          gatewayHeader,
+          options.gatewaySecret,
+        );
+        if (!valid) {
+          return new Response("Invalid gateway header.", { status: 401 });
+        }
+      }
+      const result = parseInitData(initDataRaw);
+      if (!result.ok) {
+        return new Response("Malformed Telegram initData.", { status: 400 });
+      }
+      setTmaLocals(event, result.data);
+      return;
+    }
+
+    // Validation mode: full HMAC-SHA256 check against the bot token.
     const result = await validateInitData(
       initDataRaw,
       botToken,
