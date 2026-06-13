@@ -1,6 +1,6 @@
 {
   "name": "@rustigram/tma-core",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Framework-agnostic Telegram Mini App primitives, bridge, and mock",
   "type": "module",
   "main": "./dist/index.cjs",
