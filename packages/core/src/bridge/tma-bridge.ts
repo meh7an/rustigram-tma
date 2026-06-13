@@ -37,6 +37,8 @@ export interface LaunchContext {
    * validation of the raw `WebApp.initData` string.
    */
   readonly initDataUnsafe: WebAppInitData;
+  /** Raw unparsed initData string for server-side validation. */
+  readonly initDataRaw: string;
 }
 
 /**
@@ -127,6 +129,7 @@ export function initBridge(options?: BridgeOptions): TmaBridge {
     colorScheme: webApp.colorScheme,
     themeParams: webApp.themeParams,
     initDataUnsafe: webApp.initDataUnsafe,
+    initDataRaw: webApp.initData,
   };
 
   return {
