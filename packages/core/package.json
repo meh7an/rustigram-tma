@@ -13,19 +13,27 @@
       ],
       "./mock": [
         "./dist/mock/index.d.ts"
+      ],
+      "./generated": [
+        "./dist/generated/index.d.ts"
       ]
     }
   },
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
     "./mock": {
       "types": "./dist/mock/index.d.ts",
       "import": "./dist/mock/index.js",
       "require": "./dist/mock/index.cjs"
     },
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+    "./generated": {
+      "types": "./dist/generated/index.d.ts",
+      "import": "./dist/generated/index.js",
+      "require": "./dist/generated/index.cjs"
     }
   },
   "files": [

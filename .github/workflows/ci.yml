@@ -37,3 +37,43 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  type-sync:
+    name: Rust Type Sync
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout rustigram-tma
+        uses: actions/checkout@v6
+        with:
+          path: rustigram-tma
+
+      - name: Checkout rustigram
+        uses: actions/checkout@v6
+        with:
+          repository: meh7an/rustigram
+          path: rustigram
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rustigram
+
+      - name: Generate types
+        run: |
+          cargo run \
+            --manifest-path rustigram/Cargo.toml \
+            -p rustigram-miniapp \
+            --example gen-types \
+            --features ts
+        env:
+          TMA_TYPES_OUT: /tmp/tma-generated
+
+      - name: Check for drift
+        run: |
+          diff -r \
+            --exclude="index.ts" \
+            /tmp/tma-generated \
+            rustigram-tma/packages/core/src/generated/
+          echo "Generated types are in sync with Rust structs."
